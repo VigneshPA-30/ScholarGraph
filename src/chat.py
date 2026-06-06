@@ -1,36 +1,33 @@
-import os
-from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
-
-load_dotenv()
-
-# GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-
-class ModelInvoke:
-    def __init__(self, model_name:str="gemini-2.5-flash-lite"):
-        self.model_name = model_name
-    
-
-    def ModelInvoke(self):
-        llm = ChatGoogleGenerativeAI(
-            model=self.model_name,
-            temperature=0.3
-        )
-
-        return llm
-
-
-
+from model_invoke import ModelInvoke
+from document_loader import Embeddings
 
 
 class Chat:
     def __init__(self):
-        M  = ModelInvoke()
-        self.llm = M.ModelInvoke()
+        self.model = ModelInvoke()
+        # self.model = M.ModelInvoke()
+        self.emb = Embeddings()
+        self.llm = self.model.LLMModelInvoke()
 
-    def ChatwithLLM(self, input:str="Hello!", ):
-        response = self.llm.invoke(input)
+    def load_documents(self, path):
+        self.retriever = self.emb.PdfEmbeddings(self.model, path)
+
+
+    def ChatwithLLM(self, input:str="Hello!", use_docs:bool=True):
+
+        
+        retrievedDocs = self.retriever.invoke(input)
+        # print(retrievedDocs)
+
+        prompt = f"""
+            Answer properly
+
+            user_input:{input}
+            context(if empty, ignore it):{retrievedDocs}
+            """
+
+        response = self.llm.invoke(prompt)
+
         return response.content
 
 
