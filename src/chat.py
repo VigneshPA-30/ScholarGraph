@@ -1,5 +1,6 @@
-from model_invoke import ModelInvoke
-from document_loader import Embeddings
+from src.model_invoke import ModelInvoke
+from src.document_loader import Embeddings
+from utils.prompts import main_prompt
 
 
 class Chat:
@@ -19,13 +20,8 @@ class Chat:
         retrievedDocs = self.retriever.invoke(input)
         # print(retrievedDocs)
 
-        prompt = f"""
-            Answer properly
-
-            user_input:{input}
-            context(if empty, ignore it):{retrievedDocs}
-            """
-
+        
+        prompt = main_prompt(input, retrievedDocs)
         response = self.llm.invoke(prompt)
 
         return response.content
