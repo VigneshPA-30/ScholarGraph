@@ -7,20 +7,20 @@ class Chat:
     def __init__(self):
         self.model = ModelInvoke()
         # self.model = M.ModelInvoke()
-        self.emb = Embeddings()
+        self.emb = Embeddings(self.model)
         self.llm = self.model.LLMModelInvoke()
 
     def load_documents(self, path):
-        self.retriever = self.emb.PdfEmbeddings(self.model, path)
+        self.hash_value = self.emb.PdfEmbeddings(path)
+
+    def retrieveDocs(self, input):
+        retriever = self.emb.getRetriever([self.hash_value])
+        retrievedDocs = retriever.invoke(input)
+        return retrievedDocs
 
 
-    def ChatwithLLM(self, input:str="Hello!", use_docs:bool=True):
-
-        
-        retrievedDocs = self.retriever.invoke(input)
+    def ChatwithLLM(self, input:str="Hello!", retrievedDocs:str="",use_docs:bool=True):
         # print(retrievedDocs)
-
-        
         prompt = main_prompt(input, retrievedDocs)
         response = self.llm.invoke(prompt)
 

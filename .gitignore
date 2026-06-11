@@ -12,3 +12,4 @@ wheels/
 .env
 
 /db
+/utils/processedfiles.json
