@@ -67,10 +67,6 @@ class DocumentLoader:
         return hasher.hexdigest()
 
 
-
-
-
-
 class Embeddings:
     def __init__(self, model):
         self.docLoader = DocumentLoader()
