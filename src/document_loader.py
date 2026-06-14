@@ -73,7 +73,7 @@ class Embeddings:
         self.embeddings = model.TextembeddingModelInvoke()
 
     def PdfEmbeddings(self, pdfpath):
-        
+        print(f"pdf_path inside Embeddings {pdfpath}")
         hash_value = self.docLoader.getHash(pdfpath)
 
         if not self.docLoader.isProcessed(pdfpath):

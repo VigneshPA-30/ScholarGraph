@@ -9,12 +9,15 @@ class Chat:
         # self.model = M.ModelInvoke()
         self.emb = Embeddings(self.model)
         self.llm = self.model.LLMModelInvoke()
+        self.hash_values = []
 
     def load_documents(self, path):
-        self.hash_value = self.emb.PdfEmbeddings(path)
+        print(f"Chat file:{path}")
+        self.hash_values.append(self.emb.PdfEmbeddings(path))
+        print(self.hash_values)
 
     def retrieveDocs(self, input):
-        retriever = self.emb.getRetriever([self.hash_value])
+        retriever = self.emb.getRetriever(self.hash_values)
         retrievedDocs = retriever.invoke(input)
         return retrievedDocs
 

@@ -13,9 +13,11 @@ class ChatState(TypedDict):
 
 
 class ChatNode():
-    def __init__(self):
+    def __init__(self,pdf_paths:list):
         self.chat = Chat()
-        self.chat.load_documents(r"C:\Users\pavig\Downloads\Vignesh_PA_Resume (1).pdf")
+        for path in pdf_paths:
+            print(f"ChatNode: {path}")
+            self.chat.load_documents(str(path))
 
     def retrieveDocs(self, ChatState):
         docs = self.chat.retrieveDocs(ChatState["input"])
@@ -27,8 +29,9 @@ class ChatNode():
     
 
 
-def builderGraph():
-    nodes = ChatNode()
+def builderGraph(DOC_PATHS):
+    print(f"Builder Graph {DOC_PATHS}")
+    nodes = ChatNode(DOC_PATHS)
     builder = StateGraph(ChatState)
 
     builder.add_node("retriever", nodes.retrieveDocs)
