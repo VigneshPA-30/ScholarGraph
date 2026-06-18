@@ -1,15 +1,16 @@
-from src.model_invoke import ModelInvoke
-from src.document_loader import DocumentProcessor
+# from src.model_invoke import ModelInvoke
+# from src.document_loader import DocumentProcessor
 from utils.prompts import main_prompt
 
 
 
 class Chat:
-    def __init__(self):
-        pass
+    def __init__(self, docparserobj,modelinvokeobj):
+        self.docparserobj = docparserobj
+        self.llm = modelinvokeobj.LLMModelInvoke()
 
-    def retrieveDocs(self):
-        retriever = DocumentProcessor.getRetriever()
+    def retrieveDocs(self,input:str):
+        retriever = self.docparserobj.getRetriever()
         retrievedDocs = retriever.invoke(input)
         return retrievedDocs
 

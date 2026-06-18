@@ -2,7 +2,7 @@
 from src.graph import builderGraph
 from src.chat import Chat
 from src.model_invoke import ModelInvoke
-from src.model_invoke import DocumentProcessor
+from src.document_loader import DocumentProcessor
 from typing import List
 
 
@@ -16,7 +16,7 @@ class Start():
 
     def start_chat(self, user_ip:str):
         # print(f"Doc paths in BuilderGraph call : {self.DOC_PATHS}")
-        graph = builderGraph()
+        graph = builderGraph(self.docprocessing, self.modelinvoke)
         
         answer = graph.invoke({
                 "input": user_ip,

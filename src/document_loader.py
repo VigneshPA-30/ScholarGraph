@@ -1,5 +1,7 @@
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter, SemanticChunker
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_experimental.text_splitter import SemanticChunker
+
 from langchain_chroma import Chroma
 import hashlib, json
 from unstructured.partition.auto import partition
@@ -7,7 +9,7 @@ from typing import List
 from pathlib import Path
 from pydantic import BaseModel, Field
 
-class ChunkingOutput:
+class ChunkingOutput(BaseModel):
     detailed_text:str=Field(description="Detailed description of the given input by the LLM")
 
 
@@ -80,26 +82,34 @@ class DocumentProcessor:
         self.docLoader = DocumentLoader()
         self.embeddings_model = model.textembeddingModelInvoke()
         self.chunkingModelInvoke = model.chunkingModelInvoke()
+        # self.textSplitter = SemanticChunker(embeddings = self.embeddings_model)
+        self.textSplitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        self.vector_db = Chroma(persist_directory="./db", embedding_function=self.embeddings_model,)
 
 
     def startprocessing(self, doc_paths:List):
         for doc_path in doc_paths:
-            self.chunkingDocs(str(doc_path))
+            if not self.docLoader.isProcessed(doc_path):
+                val = self.chunkingDocs(str(doc_path))
+                if not val: print("Processing Error...")
         return True
 
     def chunkingDocs(self,doc_path:str):
         hash_value = self.docLoader.getHash(doc_path)
-        elements = partition(filename=doc_path,
-                             strategy="hi_res",
-                             extract_image_block_output_dir="utils/imageoutputs/",
-                             extract_images_in_pdf=True)
+        # elements = partition(filename=doc_path,
+        #                      strategy="hi_res",
+        #                      extract_image_block_output_dir="utils/imageoutputs/",
+        #                      extract_images_in_pdf=True)
+        elements = partition(filename=doc_path, strategy="fast")
+        chunks = []
         try:
             for element in elements:
                 element_type = element.category
                 page_no = getattr(element.metadata, "page_number", None)   
 
                 if element_type == "NarrativeText":
-                    self.embedText(element.text, page_no, doc_path, hash_value)
+                    chunk = self.embedText(element.text, page_no, doc_path, hash_value)
+                    chunks.extend(chunk)
 
                 elif element_type == "Table":
                     pass
@@ -107,7 +117,11 @@ class DocumentProcessor:
                 elif element_type == "Image":
                     # You could instead send the extracted image to a vision model
                     pass
+            self.savetoVectorDB(chunks)
+            self.docLoader.storeHash(hash_value,doc_path)
+            return True 
         except Exception as e:
+            print(f"Error processing {doc_path}: {e}")
             return False
                 
 
@@ -118,47 +132,43 @@ class DocumentProcessor:
             "pdf_hash":hash_val
         }
 
-        textSplitter = SemanticChunker(embeddings = self.embeddings_model)
-        chunks = textSplitter.create_documents(texts = [text],
+        
+        chunks = self.textSplitter.create_documents(texts = [text],
                                                metadatas = [metadata])
         
-        self.savetoVectorDB(chunks)
+        return chunks
 
     def savetoVectorDB(self, chunks):
-        vector_db = Chroma.from_documents(
-                documents=chunks,
-                embedding=self.embeddings_model,
-                persist_directory=f"./db"
-            )
+        self.vector_db.add_documents(chunks)
 
 
 
-    def PdfEmbeddings(self, pdfpath):
-        print(f"pdf_path inside Embeddings {pdfpath}")
-        hash_value = self.docLoader.getHash(pdfpath)
+    # def PdfEmbeddings(self, pdfpath):
+    #     print(f"pdf_path inside Embeddings {pdfpath}")
+    #     hash_value = self.docLoader.getHash(pdfpath)
 
-        if not self.docLoader.isProcessed(pdfpath):
+    #     if not self.docLoader.isProcessed(pdfpath):
 
-            docs = self.docLoader.PdfLoader(pdfpath)
-            for doc in docs:
-                doc.metadata["pdf_hash"] = hash_value
-                # print("DOC",doc)
+    #         docs = self.docLoader.PdfLoader(pdfpath)
+    #         for doc in docs:
+    #             doc.metadata["pdf_hash"] = hash_value
+    #             # print("DOC",doc)
 
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-            chunks = text_splitter.split_documents(docs)  
+    #         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    #         chunks = text_splitter.split_documents(docs)  
 
-            # print("LENCHUNKS",len(chunks))      
+    #         # print("LENCHUNKS",len(chunks))      
 
-            vector_db = Chroma.from_documents(
-                documents=chunks,
-                embedding=self.embeddings_model,
-                persist_directory=f"./db"
-            )
-            self.docLoader.storeHash(hash_value,pdfpath)
+    #         vector_db = Chroma.from_documents(
+    #             documents=chunks,
+    #             embedding=self.embeddings_model,
+    #             persist_directory=f"./db"
+    #         )
+    #         self.docLoader.storeHash(hash_value,pdfpath)
         
            
 
-        return hash_value
+    #     return hash_value
 
     def getRetriever(self):
         search_kwargs = {"k":5}

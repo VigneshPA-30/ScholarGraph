@@ -13,8 +13,8 @@ class ChatState(TypedDict):
 
 
 class ChatNode():
-    def __init__(self):
-        self.chat = Chat()
+    def __init__(self, docparserobj,modelinvokeobj):
+        self.chat = Chat(docparserobj,modelinvokeobj)
         # for path in pdf_paths:
         #     print(f"ChatNode: {path}")
         #     self.chat.load_documents(str(path))
@@ -29,9 +29,9 @@ class ChatNode():
     
 
 
-def builderGraph():
+def builderGraph(docparserobj,modelinvokeobj):
     # print(f"Builder Graph {DOC_PATHS}")
-    nodes = ChatNode()
+    nodes = ChatNode(docparserobj,modelinvokeobj)
     builder = StateGraph(ChatState)
 
 # Building Nodes
