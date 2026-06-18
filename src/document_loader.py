@@ -115,7 +115,7 @@ class DocumentProcessor:
         metadata = {
             "page_no":page_no,
             "doc_path":doc_path,
-            "hash_val":hash_val
+            "pdf_hash":hash_val
         }
 
         textSplitter = SemanticChunker(embeddings = self.embeddings_model)
@@ -160,19 +160,19 @@ class DocumentProcessor:
 
         return hash_value
 
-    def getRetriever(self, selectedHashes:list=None):
+    def getRetriever(self):
         search_kwargs = {"k":5}
         # print(selectedHashes)
-        if selectedHashes:
-            search_kwargs["filter"]={
-                "pdf_hash":{
-                "$in":selectedHashes
-                }
-            }
+        # if selectedHashes:
+        #     search_kwargs["filter"]={
+        #         "pdf_hash":{
+        #         "$in":selectedHashes
+        #         }
+        #     }
 
         vector_db = Chroma(
                 persist_directory=f"./db",
-                embedding_function=self.embeddings
+                embedding_function=self.embeddings_model
             )
         
 

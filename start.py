@@ -15,9 +15,8 @@ class Start():
         return self.docprocessing.startprocessing(pdf_paths)
 
     def start_chat(self, user_ip:str):
-        print("Starting from inside SRC folder") #for dev
-        print(f"Doc paths in BuilderGraph call : {self.DOC_PATHS}")
-        graph = builderGraph(self.DOC_PATHS)
+        # print(f"Doc paths in BuilderGraph call : {self.DOC_PATHS}")
+        graph = builderGraph()
         
         answer = graph.invoke({
                 "input": user_ip,
@@ -34,6 +33,8 @@ def appStartObj():
 
 def main():
     #dummy for local test
+    print("Starting from inside SRC folder") #for dev
+
     Start.start_chat("What is my name?")
 
     

@@ -1,19 +1,15 @@
 from src.model_invoke import ModelInvoke
-from src.document_loader import Embeddings
+from src.document_loader import DocumentProcessor
 from utils.prompts import main_prompt
 
 
 
 class Chat:
     def __init__(self):
-        # self.model = ModelInvoke()
-        # self.model = M.ModelInvoke()
-        self.emb = Embeddings(self.model)
-        self.llm = self.model.LLMModelInvoke()
-        self.hash_values = []
+        pass
 
-    def retrieveDocs(self, input):
-        retriever = self.emb.getRetriever(self.hash_values)
+    def retrieveDocs(self):
+        retriever = DocumentProcessor.getRetriever()
         retrievedDocs = retriever.invoke(input)
         return retrievedDocs
 
