@@ -1,8 +1,16 @@
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter, SemanticChunker
 from langchain_chroma import Chroma
 import hashlib, json
+from unstructured.partition.auto import partition
+from typing import List
 from pathlib import Path
+from pydantic import BaseModel, Field
+
+class ChunkingOutput:
+    detailed_text:str=Field(description="Detailed description of the given input by the LLM")
+
+
 
 
 PROCESSED_JSON_PATH = "utils/processedfiles.json"
@@ -67,10 +75,63 @@ class DocumentLoader:
         return hasher.hexdigest()
 
 
-class Embeddings:
+class DocumentProcessor:
     def __init__(self, model):
         self.docLoader = DocumentLoader()
-        self.embeddings = model.TextembeddingModelInvoke()
+        self.embeddings_model = model.textembeddingModelInvoke()
+        self.chunkingModelInvoke = model.chunkingModelInvoke()
+
+
+    def startprocessing(self, doc_paths:List):
+        for doc_path in doc_paths:
+            self.chunkingDocs(str(doc_path))
+        return True
+
+    def chunkingDocs(self,doc_path:str):
+        hash_value = self.docLoader.getHash(doc_path)
+        elements = partition(filename=doc_path,
+                             strategy="hi_res",
+                             extract_image_block_output_dir="utils/imageoutputs/",
+                             extract_images_in_pdf=True)
+        try:
+            for element in elements:
+                element_type = element.category
+                page_no = getattr(element.metadata, "page_number", None)   
+
+                if element_type == "NarrativeText":
+                    self.embedText(element.text, page_no, doc_path, hash_value)
+
+                elif element_type == "Table":
+                    pass
+
+                elif element_type == "Image":
+                    # You could instead send the extracted image to a vision model
+                    pass
+        except Exception as e:
+            return False
+                
+
+    def embedText(self, text:str, page_no:int, doc_path:str, hash_val:str):
+        metadata = {
+            "page_no":page_no,
+            "doc_path":doc_path,
+            "hash_val":hash_val
+        }
+
+        textSplitter = SemanticChunker(embeddings = self.embeddings_model)
+        chunks = textSplitter.create_documents(texts = [text],
+                                               metadatas = [metadata])
+        
+        self.savetoVectorDB(chunks)
+
+    def savetoVectorDB(self, chunks):
+        vector_db = Chroma.from_documents(
+                documents=chunks,
+                embedding=self.embeddings_model,
+                persist_directory=f"./db"
+            )
+
+
 
     def PdfEmbeddings(self, pdfpath):
         print(f"pdf_path inside Embeddings {pdfpath}")
@@ -90,7 +151,7 @@ class Embeddings:
 
             vector_db = Chroma.from_documents(
                 documents=chunks,
-                embedding=self.embeddings,
+                embedding=self.embeddings_model,
                 persist_directory=f"./db"
             )
             self.docLoader.storeHash(hash_value,pdfpath)

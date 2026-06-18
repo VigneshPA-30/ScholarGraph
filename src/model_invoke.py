@@ -1,4 +1,3 @@
-
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -7,19 +6,24 @@ load_dotenv()
 
 
 class ModelInvoke:
-    def __init__(self, llm_model:str="gemini-2.5-flash-lite", embedding_model:str="gemini-embedding-001"):
-        self.llm_model= llm_model
-        self.embedding_model = embedding_model
-        self.textembeddings = GoogleGenerativeAIEmbeddings(model=self.embedding_model)
-    
+    def __init__(self):
+        pass
 
-    def LLMModelInvoke(self):
+
+    def LLMModelInvoke(self, llm_model:str="gemini-2.5-flash-lite"):
         llm = ChatGoogleGenerativeAI(
-            model=self.llm_model,
+            model=llm_model,
             temperature=0.3
         )
-
         return llm
     
-    def TextembeddingModelInvoke(self):
-        return self.textembeddings
+    def textembeddingModelInvoke(self, embedding_model:str="gemini-embedding-001"):
+        textembeddingsModel = GoogleGenerativeAIEmbeddings(model=embedding_model)
+        return textembeddingsModel
+    
+    def chunkingModelInvoke(self, chunking_model:str="gemini-2.5-flash-lite"):
+        chunkingModel = ChatGoogleGenerativeAI(
+            model=chunking_model,
+            temperature=0
+        )
+        return chunkingModel

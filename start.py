@@ -1,28 +1,40 @@
 # from src.chat import Chat
 from src.graph import builderGraph
 from src.chat import Chat
-
-DOC_PATHS = []
-def uploaded_doc_paths(pdf_path):
-    DOC_PATHS.append(pdf_path)
-
+from src.model_invoke import ModelInvoke
+from src.model_invoke import DocumentProcessor
+from typing import List
 
 
-def start_chat(user_ip:str):
-    print("Starting from inside SRC folder") #for dev
-    print(f"Doc paths in BuilderGraph call : {DOC_PATHS}")
-    graph = builderGraph(DOC_PATHS)
+class Start():
+    def __init__(self):
+        self.modelinvoke = ModelInvoke()
+        self.docprocessing = DocumentProcessor(self.modelinvoke)
+
+    def uploaded_doc_paths(self,pdf_paths:List):
+        return self.docprocessing.startprocessing(pdf_paths)
+
+    def start_chat(self, user_ip:str):
+        print("Starting from inside SRC folder") #for dev
+        print(f"Doc paths in BuilderGraph call : {self.DOC_PATHS}")
+        graph = builderGraph(self.DOC_PATHS)
+        
+        answer = graph.invoke({
+                "input": user_ip,
+                "context": "",
+                "output": ""
+            })
+        print(answer["output"])
+        return answer["output"]
     
-    answer = graph.invoke({
-            "input": user_ip,
-            "context": "",
-            "output": ""
-        })
-    print(answer["output"])
-    return answer["output"]
+
+
+def appStartObj():
+    return Start()
 
 def main():
-    start_chat("What is my name?")
+    #dummy for local test
+    Start.start_chat("What is my name?")
 
     
 
