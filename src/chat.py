@@ -16,10 +16,11 @@ class Chat:
 
 
     def ChatwithLLM(self, input:str="Hello!", retrievedDocs:str="",use_docs:bool=True):
-        # print(retrievedDocs)
+        print(retrievedDocs)
         prompt = main_prompt(input, retrievedDocs)
         response = self.llm.invoke(prompt)
 
         return response.content
+        # return "DOne"
 
 

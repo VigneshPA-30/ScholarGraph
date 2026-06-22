@@ -5,9 +5,12 @@ from langchain_experimental.text_splitter import SemanticChunker
 from langchain_chroma import Chroma
 import hashlib, json
 from unstructured.partition.auto import partition
-from typing import List
+from typing import List, Dict
 from pathlib import Path
 from pydantic import BaseModel, Field
+import time
+from tenacity import retry, stop_after_attempt, wait_exponential
+
 
 class ChunkingOutput(BaseModel):
     detailed_text:str=Field(description="Detailed description of the given input by the LLM")
@@ -83,15 +86,15 @@ class DocumentProcessor:
         self.embeddings_model = model.textembeddingModelInvoke()
         self.chunkingModelInvoke = model.chunkingModelInvoke()
         # self.textSplitter = SemanticChunker(embeddings = self.embeddings_model)
-        self.textSplitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        self.textSplitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=300)
         self.vector_db = Chroma(persist_directory="./db", embedding_function=self.embeddings_model,)
 
 
     def startprocessing(self, doc_paths:List):
         for doc_path in doc_paths:
             if not self.docLoader.isProcessed(doc_path):
-                val = self.chunkingDocs(str(doc_path))
-                if not val: print("Processing Error...")
+                if not self.chunkingDocs(str(doc_path)):
+                    return False
         return True
 
     def chunkingDocs(self,doc_path:str):
@@ -102,14 +105,28 @@ class DocumentProcessor:
         #                      extract_images_in_pdf=True)
         elements = partition(filename=doc_path, strategy="fast")
         chunks = []
+        current_title = ""
+        texts_to_embed = []
+        metadatas_to_embed = []
         try:
             for element in elements:
                 element_type = element.category
-                page_no = getattr(element.metadata, "page_number", None)   
+                page_no = getattr(element.metadata, "page_number", None)  
+                
 
-                if element_type == "NarrativeText":
-                    chunk = self.embedText(element.text, page_no, doc_path, hash_value)
-                    chunks.extend(chunk)
+                if element.category in ["Title", "Header"]:
+                    current_title = element.text
+                elif element_type in ["NarrativeText", "ListItem"]:
+                    # print(element.text)
+                    # chunk = self.embedText(f"Title:{current_title}\n\n {element.text}", page_no, doc_path, hash_value)
+                    # chunks.extend(chunk)
+                    texts_to_embed.append(f"Title:{current_title}\n\n {element.text}")
+                    metadata = {
+                                "page_no":page_no,
+                                "doc_path":doc_path,
+                                "pdf_hash":hash_value
+                            }
+                    metadatas_to_embed.append(metadata)
 
                 elif element_type == "Table":
                     pass
@@ -117,6 +134,8 @@ class DocumentProcessor:
                 elif element_type == "Image":
                     # You could instead send the extracted image to a vision model
                     pass
+
+            chunks = self.embedTextBtach(texts_to_embed, metadatas_to_embed)
             self.savetoVectorDB(chunks)
             self.docLoader.storeHash(hash_value,doc_path)
             return True 
@@ -124,24 +143,35 @@ class DocumentProcessor:
             print(f"Error processing {doc_path}: {e}")
             return False
                 
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=60))
+    def embedTextBtach(self, texts:List[str],metadatas:List[Dict]):
+   
 
-    def embedText(self, text:str, page_no:int, doc_path:str, hash_val:str):
-        metadata = {
-            "page_no":page_no,
-            "doc_path":doc_path,
-            "pdf_hash":hash_val
-        }
-
-        
-        chunks = self.textSplitter.create_documents(texts = [text],
-                                               metadatas = [metadata])
+        # print(text)
+        chunks = self.textSplitter.create_documents(texts = texts,
+                                               metadatas = metadatas)
         
         return chunks
 
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=2, min=12, max=65))
+    def _add_batch_with_retry(self, batch):
+        self.vector_db.add_documents(batch)
+
     def savetoVectorDB(self, chunks):
-        self.vector_db.add_documents(chunks)
-
-
+        # We cap the batch size at 80 to comfortably stay under the 100/min limit.
+        batch_size = 80 
+        
+        for i in range(0, len(chunks), batch_size):
+            batch = chunks[i:i + batch_size]
+            print(f"Embedding batch {i//batch_size + 1} ({len(batch)} chunks)...")
+            
+            # This handles transient network failures
+            self._add_batch_with_retry(batch)
+            
+            # If there are more chunks left, we MUST wait 60 seconds to reset the free tier quota
+            if i + batch_size < len(chunks):
+                print("Batch successful. Sleeping for 60 seconds to respect API rate limits...")
+                time.sleep(60)
 
     # def PdfEmbeddings(self, pdfpath):
     #     print(f"pdf_path inside Embeddings {pdfpath}")
