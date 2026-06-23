@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, HTTPException, File, UploadFile as Standar
 from pydantic import BaseModel, WithJsonSchema, Field
 from contextlib import asynccontextmanager
 from typing import List, Annotated
-from start import appStartObj
+from app.core.start import appStartObj
 import os, shutil
 from pathlib import Path
 

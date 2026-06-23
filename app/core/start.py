@@ -1,8 +1,8 @@
 # from src.chat import Chat
-from src.graph import builderGraph
-from src.chat import Chat
-from src.model_invoke import ModelInvoke
-from src.document_loader import DocumentProcessor
+from app.core.graph import builderGraph
+from app.core.chat import Chat
+from app.models.model_invoke import ModelInvoke
+from app.core.document_loader import DocumentProcessor
 from typing import List
 
 
