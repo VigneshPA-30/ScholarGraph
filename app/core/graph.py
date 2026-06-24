@@ -13,8 +13,8 @@ class ChatState(TypedDict):
 
 
 class ChatNode():
-    def __init__(self, docparserobj,modelinvokeobj):
-        self.chat = Chat(docparserobj,modelinvokeobj)
+    def __init__(self, dependecymanager):
+        self.chat = Chat(dependecymanager)
         # for path in pdf_paths:
         #     print(f"ChatNode: {path}")
         #     self.chat.load_documents(str(path))
@@ -24,15 +24,15 @@ class ChatNode():
         return {"context":docs}
     
     def ChatwithLLM(self, ChatState,usedocs:bool=True):
-        print("chatNode chatwothllm")
+        # print("chatNode chatwithllm")
         answer = self.chat.ChatwithLLM(ChatState["input"], ChatState["context"], usedocs)
         return {"output":answer}
     
 
 
-def builderGraph(docparserobj,modelinvokeobj):
+def builderGraph(dependecymanager):
     print(f"Builder Graph...")
-    nodes = ChatNode(docparserobj,modelinvokeobj)
+    nodes = ChatNode(dependecymanager)
     builder = StateGraph(ChatState)
 
 # Building Nodes

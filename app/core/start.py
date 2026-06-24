@@ -1,7 +1,9 @@
 # from src.chat import Chat
 from .graph import builderGraph
 from .chat import Chat
+from .dependencies import DependencyManager
 from ..models.model_invoke import ModelInvoke
+from ..tools.tools import Tools
 from .callbacks import QueueStreamCallback
 from .document_loader import DocumentProcessor
 from typing import List
@@ -12,7 +14,14 @@ from queue import Queue
 class Start():
     def __init__(self):
         self.modelinvoke = ModelInvoke()
+        self.dependecymanager = DependencyManager(self.modelinvoke)
+
         self.docprocessing = DocumentProcessor(self.modelinvoke)
+        self.tools = Tools(self.dependecymanager)
+        
+        self.dependecymanager.setdocparssingobj(self.docprocessing)
+        self.dependecymanager.settoolsobj(self.tools)
+
 
     def uploaded_doc_paths(self,pdf_paths:List):
         return self.docprocessing.startprocessing(pdf_paths)
@@ -20,7 +29,7 @@ class Start():
     def start_chat(self, user_ip:str):
         print(f"start_chat...")
         streamqueue = Queue()
-        graph = builderGraph(self.docprocessing, self.modelinvoke)
+        graph = builderGraph(self.dependecymanager)
         
         def start_graph():
             answer = graph.invoke({
