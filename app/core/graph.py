@@ -24,13 +24,14 @@ class ChatNode():
         return {"context":docs}
     
     def ChatwithLLM(self, ChatState,usedocs:bool=True):
+        print("chatNode chatwothllm")
         answer = self.chat.ChatwithLLM(ChatState["input"], ChatState["context"], usedocs)
         return {"output":answer}
     
 
 
 def builderGraph(docparserobj,modelinvokeobj):
-    # print(f"Builder Graph {DOC_PATHS}")
+    print(f"Builder Graph...")
     nodes = ChatNode(docparserobj,modelinvokeobj)
     builder = StateGraph(ChatState)
 

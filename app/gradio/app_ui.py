@@ -44,18 +44,27 @@ def chat(message, history):
         "user_input": message
     }
 
+    history.append({"role": "user", "content": message})
+    history.append({"role": "assistant", "content": ""})
+
     response = requests.post(
         f"{FASTAPI_URL}/chat",
-        json=payload
+        json=payload,
+        stream=True
     )
-
-    if response.ok:
-        answer = response.json().get("response", "No response.")
-    else:
-        answer = f"Error: {response.text}"
-
-    history.append({"role": "user", "content": message})
-    history.append({"role": "assistant", "content": answer})
+    try:
+        if response.ok:
+            for chunk in  response.iter_content(chunk_size=None, decode_unicode=True):
+                if chunk:
+                    history[-1]["content"] += chunk
+                    yield history,""
+        else:
+            history[-1]["content"] = f"Error: {response.status_code} - {response.text}"
+            yield history, ""
+    except requests.exceptions.RequestException as e:
+            history[-1]["content"] = f"Connection Error: {str(e)}"
+            yield history, ""
+   
 
     return history, ""
 

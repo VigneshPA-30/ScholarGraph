@@ -1,9 +1,12 @@
 # from src.chat import Chat
-from app.core.graph import builderGraph
-from app.core.chat import Chat
-from app.models.model_invoke import ModelInvoke
-from app.core.document_loader import DocumentProcessor
+from .graph import builderGraph
+from .chat import Chat
+from ..models.model_invoke import ModelInvoke
+from .callbacks import QueueStreamCallback
+from .document_loader import DocumentProcessor
 from typing import List
+import threading
+from queue import Queue
 
 
 class Start():
@@ -15,16 +18,28 @@ class Start():
         return self.docprocessing.startprocessing(pdf_paths)
 
     def start_chat(self, user_ip:str):
-        # print(f"Doc paths in BuilderGraph call : {self.DOC_PATHS}")
+        print(f"start_chat...")
+        streamqueue = Queue()
         graph = builderGraph(self.docprocessing, self.modelinvoke)
         
-        answer = graph.invoke({
-                "input": user_ip,
-                "context": "",
-                "output": ""
-            })
-        print(answer["output"])
-        return answer["output"]
+        def start_graph():
+            answer = graph.invoke({
+                    "input": user_ip,
+                    "context": "",
+                    "output": ""
+                },
+                config= {"callbacks":[QueueStreamCallback(streamqueue)]}
+                )
+            print(answer["output"])
+            return answer["output"]
+        
+        threading.Thread(target=start_graph).start()
+
+        while True:
+            token = streamqueue.get()
+            if token is None:
+                break
+            yield token
     
 
 

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request, HTTPException, File, UploadFile as StandardUploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, WithJsonSchema, Field
 from contextlib import asynccontextmanager
 from typing import List, Annotated
@@ -37,12 +38,16 @@ def root():
 @app.post("/chat")
 async def chat(request: Request, user_ip:InputText):
     start = request.app.state.Start
-    try:
-        output = start.start_chat(user_ip.user_input)
-        # print(output)
-        return {"response":output, "success":True}
-    except Exception as e:
-        raise HTTPException(status_code =500, detail=str(e))
+    def eventGenerator():
+        try:
+            for chunk in start.start_chat(user_ip.user_input):
+                yield chunk
+            # print(output)
+            # return {"response":output, "success":True}
+        except Exception as e:
+            raise HTTPException(status_code =500, detail=str(e))
+        
+    return StreamingResponse(eventGenerator(), media_type="text/plain")
 
 
 

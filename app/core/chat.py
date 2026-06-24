@@ -1,6 +1,6 @@
 # from src.model_invoke import ModelInvoke
 # from src.document_loader import DocumentProcessor
-from app.utils.prompts import main_prompt
+from ..utils.prompts import main_prompt
 
 
 

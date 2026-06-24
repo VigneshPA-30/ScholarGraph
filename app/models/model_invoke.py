@@ -13,7 +13,8 @@ class ModelInvoke:
     def LLMModelInvoke(self, llm_model:str="gemini-2.5-flash-lite"):
         llm = ChatGoogleGenerativeAI(
             model=llm_model,
-            temperature=0.3
+            temperature=0.3,
+            streaming = True
         )
         return llm
     
