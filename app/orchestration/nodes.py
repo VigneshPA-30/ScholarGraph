@@ -1,7 +1,9 @@
 from ..agents.agents import Agents
+import threading
 
 class AgentNodes():
     def __init__(self, dependecymanager):
+        self.dependecymanager = dependecymanager
         self.agents = Agents(dependecymanager)
         self.toolsObj = dependecymanager.gettoolsobj()
 
@@ -10,13 +12,15 @@ class AgentNodes():
         # print("chatNode chatwithllm")
         context = MainAgentState.get("context",[""])
         response = self.agents.mainAgent(MainAgentState["input"],context[-1])
+        print(response)
         MainAgentState["context"].append(response)
-        MainAgentState["output"] = response["output"]
+        MainAgentState["output"] = response.output
         return MainAgentState
     
     def ragAgent(self, RagAgentState):
         context = RagAgentState.get("context",[""])
         response = self.agents.ragAgent(RagAgentState["input"],context[-1])
+        print(response)
         RagAgentState["context"].append(response)
         return RagAgentState
     
@@ -33,15 +37,45 @@ class AgentNodes():
     
     def route_after_mainAgent(self, MainAgentState):
         last_msg = MainAgentState["context"][-1]
-        subAgents = last_msg["subagents"]
+        subAgents = last_msg.subagents
 
         if subAgents == []:
             return "end"
 
-        return subAgents[-1]
+        return "callagents"
+    
+
+    def callSubAgents(self, MainAgentState):
+        from .graph import RAGAgentGraph #tmp fix
+
+        last_msg = MainAgentState["context"][-1]
+        subAgents = last_msg.subagents
+
+        for agent_ in subAgents:
+            if agent_.agent =="rag":
+                ragagent = RAGAgentGraph(self, self.dependecymanager)
+                graph = ragagent.ragAgentGraph()
+                rag_response = self.start_graph(graph,agent_.query)
+
+        return rag_response
+
+
+
+    def start_graph(self, graph, query):
+        answer = graph.invoke({
+                    "input": query,
+                    "context": [""],
+                    "output": ""
+                }
+                )
+        return answer
+        
     
     def before_end(self, State):
-        return State["output"]
+        return {"output":State["output"]}
+    
+    def main_agent_before_end(self, State):
+        return {"output":State["output"]}
 
 
         

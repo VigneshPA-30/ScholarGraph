@@ -7,6 +7,7 @@ from ..tools.tools import Tools
 from .callbacks import QueueStreamCallback
 from .document_loader import DocumentProcessor
 from typing import List
+from ..orchestration.graph import MainAgentGraph
 import threading
 from queue import Queue
 
@@ -29,12 +30,13 @@ class Start():
     def start_chat(self, user_ip:str):
         print(f"start_chat...")
         streamqueue = Queue()
-        graph = builderGraph(self.dependecymanager)
+        agent_graph = MainAgentGraph(self.dependecymanager)
+        graph = agent_graph.mainAgentGraph()
         
         def start_graph():
             answer = graph.invoke({
                     "input": user_ip,
-                    "context": "",
+                    "context": [""],
                     "output": ""
                 },
                 config= {"callbacks":[QueueStreamCallback(streamqueue)]}
@@ -42,7 +44,7 @@ class Start():
             print(answer["output"])
             return answer["output"]
         
-        threading.Thread(target=start_graph).start()
+        # threading.Thread(target=start_graph).start()
 
         while True:
             token = streamqueue.get()

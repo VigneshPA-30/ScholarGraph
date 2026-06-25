@@ -10,7 +10,7 @@ class ModelInvoke:
         pass
 
 
-    def LLMModelInvoke(self, llm_model:str="gemini-2.5-flash-lite"):
+    def LLMModelInvoke(self, llm_model:str="gemini-3.1-flash-lite"):
         llm = ChatGoogleGenerativeAI(
             model=llm_model,
             temperature=0.3,

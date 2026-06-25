@@ -10,14 +10,23 @@ class Tools:
     def gettools(self):
         return self.allTools
     
-    @tool
-    def retrieverTool(self,query:str):
-        """Retrieves top 5 docs stored in the vector database that is relevant to the given query"""
+    def getretrieverTool(self):
+        """Retrieves top 5 docs stored in the vector database that is relevant to the given query from the knowledge base"""
 
-        self.docparserobj = self.dependecymanager.getdocparsingobj()
-        retriever = self.docparserobj.getRetriever()
-        retrievedDocs = retriever.invoke(query)
-        return retrievedDocs
+        @tool
+        def retrieverTool(query:str):
+            """Retrieves top 5 docs stored in the vector database that is relevant to the given query"""
+            print("Tool called....")
+            docparserobj = self.dependecymanager.getdocparsingobj()
+            retriever = docparserobj.getRetriever()
+            docs = retriever.invoke(query)
+            if not docs:
+                return "NO_RELEVANT_CONTEXT"
+            return "\n\n".join([doc.page_content for doc in docs])
+        
+        return retrieverTool
+        
+
 
 
 

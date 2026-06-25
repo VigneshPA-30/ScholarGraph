@@ -3,9 +3,15 @@ from ..utils.prompts import main_prompt,ragAgent_prompt
 from pydantic import BaseModel, Field
 from typing import Literal
 
+class AgentCall(BaseModel):
+    agent: Literal["rag"] = Field(
+        default="",  
+        description="Agents which can be called. It should match the exact literal used here "
+    )
+    query:str = Field(description="What query should the Agent work on")
 
 class MainAgentOutputStructure(BaseModel):
-    subagents: list[Literal["rag"]] = Field(
+    subagents: list[AgentCall] = Field(
         default=[],  
         description="List of agents to call. Return an empty list [] if no agents are needed."
     )
@@ -26,11 +32,14 @@ class Agents:
             prompt += f"Retrieved Content {context}"
         response = llm_output_structured.invoke(prompt)
 
-        return response.content
+        return response
     
     def ragAgent(self, input_query:str, context:str):
         llm = self.modelinvokeobj.LLMModelInvoke()
-        llm_with_tools = llm.bind_tools([self.toolsObj])
+        # retrievaltool = self.toolsObj.getretrieverTool()
+        # context_ = retrievaltool(input_query)
+        # print(context_)
+        llm_with_tools = llm.bind_tools([self.toolsObj.getretrieverTool()])
         system_prompt = ragAgent_prompt()
         prompt = system_prompt + f"input_query: {input_query}"
         if context != "":
