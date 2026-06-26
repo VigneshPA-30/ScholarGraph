@@ -30,7 +30,7 @@ class Start():
     def start_chat(self, user_ip:str):
         print(f"start_chat...")
         streamqueue = Queue()
-        agent_graph = MainAgentGraph(self.dependecymanager)
+        agent_graph = MainAgentGraph(self.dependecymanager, callbackconfig=[QueueStreamCallback(streamqueue)])
         graph = agent_graph.mainAgentGraph()
         
         def start_graph():
@@ -38,13 +38,12 @@ class Start():
                     "input": user_ip,
                     "context": [""],
                     "output": ""
-                },
-                config= {"callbacks":[QueueStreamCallback(streamqueue)]}
+                }
                 )
             print(answer["output"])
             return answer["output"]
         
-        # threading.Thread(target=start_graph).start()
+        threading.Thread(target=start_graph).start()
 
         while True:
             token = streamqueue.get()

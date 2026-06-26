@@ -2,25 +2,33 @@ from ..agents.agents import Agents
 import threading
 
 class AgentNodes():
-    def __init__(self, dependecymanager):
+    def __init__(self, dependecymanager, callbackconfig):
         self.dependecymanager = dependecymanager
         self.agents = Agents(dependecymanager)
         self.toolsObj = dependecymanager.gettoolsobj()
-
+        self.callbackconfig = callbackconfig
     
     def mainAgent(self, MainAgentState):
         # print("chatNode chatwithllm")
         context = MainAgentState.get("context",[""])
         response = self.agents.mainAgent(MainAgentState["input"],context[-1])
-        print(response)
+        print("MainAgent\n\n"+str(response))
         MainAgentState["context"].append(response)
-        MainAgentState["output"] = response.output
+        # MainAgentState["output"] = response.output
         return MainAgentState
     
+    def answerAgent(self, MainAgentState):
+        context = MainAgentState.get("context",[""])
+        response = self.agents.answerAgent(MainAgentState["input"],context[-1], callbackconfig= self.callbackconfig)
+        print("AnswerAgent\n\n"+str(response))
+        MainAgentState["context"].append(response)
+        MainAgentState["output"] = response.content
+        return MainAgentState
+
     def ragAgent(self, RagAgentState):
         context = RagAgentState.get("context",[""])
         response = self.agents.ragAgent(RagAgentState["input"],context[-1])
-        print(response)
+        print("RAGAgent\n\n"+str(response))
         RagAgentState["context"].append(response)
         return RagAgentState
     
@@ -40,7 +48,7 @@ class AgentNodes():
         subAgents = last_msg.subagents
 
         if subAgents == []:
-            return "end"
+            return "answerAgent"
 
         return "callagents"
     
@@ -50,14 +58,16 @@ class AgentNodes():
 
         last_msg = MainAgentState["context"][-1]
         subAgents = last_msg.subagents
-
+        final_response = ""
         for agent_ in subAgents:
             if agent_.agent =="rag":
                 ragagent = RAGAgentGraph(self, self.dependecymanager)
                 graph = ragagent.ragAgentGraph()
                 rag_response = self.start_graph(graph,agent_.query)
+                final_response += f"RAG response {rag_response}"
 
-        return rag_response
+        MainAgentState["context"].append(final_response)
+        return {"final_response":final_response}
 
 
 

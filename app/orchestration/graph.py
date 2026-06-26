@@ -9,9 +9,10 @@ from ..tools.tools import Tools
 from langgraph.prebuilt import ToolNode
 
 class MainAgentGraph:
-    def __init__(self, dependecymanager):
-        self.nodes = AgentNodes(dependecymanager)
+    def __init__(self, dependecymanager, callbackconfig):
+        self.nodes = AgentNodes(dependecymanager, callbackconfig)
         self.tools = dependecymanager.gettoolsobj()
+        self.callbackconfig = callbackconfig
 
     def mainAgentGraph(self):
         print(f"MainAgent Graph...")
@@ -21,14 +22,16 @@ class MainAgentGraph:
     # Building Nodes
         # builder.add_node("retriever", self.nodes.retrieveDocs)
         builder.add_node("MainAgent",self.nodes.mainAgent)
+        builder.add_node("answerAgent",self.nodes.answerAgent)
         builder.add_node("callSubAgents",self.nodes.callSubAgents)
         builder.add_node("before_end",self.nodes.main_agent_before_end)
+
         
 
     #Connecting Nodes
         builder.add_edge(START,"MainAgent")
-        builder.add_conditional_edges("MainAgent",self.nodes.route_after_mainAgent,{"callagents":"callSubAgents", "end":"before_end"})
-        builder.add_edge("callSubAgents","MainAgent")
+        builder.add_conditional_edges("MainAgent",self.nodes.route_after_mainAgent,{"callagents":"callSubAgents", "answerAgent":"answerAgent"})
+        builder.add_edge("callSubAgents","answerAgent")
         builder.add_edge("before_end",END)
 
         graph = builder.compile()
