@@ -1,7 +1,7 @@
 import gradio as gr
 import requests
 
-FASTAPI_URL = "http://localhost:8000"
+FASTAPI_URL = "http://localhost:8000/api"
 
 
 def upload_pdf(files):
@@ -114,4 +114,5 @@ with gr.Blocks(title="PDF Chat") as demo:
         outputs=[chatbot, msg]
     )
 
-demo.launch()
+if __name__ == "__main__":
+    demo.launch()

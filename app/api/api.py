@@ -13,12 +13,12 @@ class InputText(BaseModel):
     user_input:str = Field(description="Input from User")
 
 UploadFile = Annotated[StandardUploadFile, WithJsonSchema({"type": "string", "format": "binary"})]
-
+shared_start = appStartObj()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Loading Objects...")
-    app.state.Start = appStartObj()
+    app.state.Start = shared_start()
     print("Loaded Objects...")
     yield
     print("Closing App...")
@@ -37,7 +37,7 @@ def root():
 
 @app.post("/chat")
 async def chat(request: Request, user_ip:InputText):
-    start = request.app.state.Start
+    start = getattr(request.app.state, "Start", shared_start)
     def eventGenerator():
         try:
             for chunk in start.start_chat(user_ip.user_input):
@@ -55,7 +55,7 @@ async def chat(request: Request, user_ip:InputText):
 
 @app.post("/upload")
 async def upload_document(request: Request, files:List[UploadFile]= File(...)):
-    start = request.app.state.Start
+    start =  getattr(request.app.state, "Start", shared_start)
     filepaths = []
 
     for file in files:
