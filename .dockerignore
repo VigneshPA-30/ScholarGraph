@@ -1,0 +1,53 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Virtual environments and local tooling
+.venv/
+venv/
+env/
+mineru_venv/
+
+
+# Environment files and secrets
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+
+# Local data and uploads
+utils/
+utils/uploadedDocuments/
+utils/processedfiles.json
+db/
+*.sqlite3
+*.db
+mineru_output/
+
+# OS/editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Git metadata
+.git/
+.gitignore
