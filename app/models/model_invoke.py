@@ -20,6 +20,7 @@ class ModelInvoke:
     
     def textembeddingModelInvoke(self, embedding_model:str="gemini-embedding-001"):
         textembeddingsModel = GoogleGenerativeAIEmbeddings(model=embedding_model)
+        print("Embedding model Invoked.....")
         return textembeddingsModel
     
     def chunkingModelInvoke(self, chunking_model:str="gemini-2.5-flash-lite"):

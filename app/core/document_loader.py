@@ -4,7 +4,6 @@ from langchain_experimental.text_splitter import SemanticChunker
 
 from langchain_chroma import Chroma
 import hashlib, json
-from unstructured.partition.auto import partition
 from typing import List, Dict
 from pathlib import Path
 from pydantic import BaseModel, Field
@@ -27,16 +26,15 @@ class DocumentLoader:
         pass
 
     def PdfLoader(self, pdfpath):
-        # print(pdfpath)
+
         loader = PyPDFLoader(pdfpath)
-        docs = loader.load()
-        return docs
+        pages = loader.load()
+        return pages
     
     def storeHash(self,hash_value,pdfpath):
         processed_json = Path(PROCESSED_JSON_PATH)
-        # hash_value = self.getHash(pdfpath)
-        # new_data = {hash:pdfpath}
-
+        processed_json.parent.mkdir(parents=True, exist_ok=True)
+        
         if not processed_json.exists():
             jsondata = {}
         else:
@@ -85,8 +83,7 @@ class DocumentProcessor:
         self.docLoader = DocumentLoader()
         self.embeddings_model = model.textembeddingModelInvoke()
         self.chunkingModelInvoke = model.chunkingModelInvoke()
-        # self.textSplitter = SemanticChunker(embeddings = self.embeddings_model)
-        self.textSplitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=300)
+        self.textSplitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         self.vector_db = Chroma(persist_directory="./db", embedding_function=self.embeddings_model,)
 
 
@@ -96,13 +93,33 @@ class DocumentProcessor:
                 if not self.chunkingDocs(str(doc_path)):
                     return False
         return True
-
-    def chunkingDocs(self,doc_path:str):
+    
+    def chunkingDocs(self, doc_path:str):
         hash_value = self.docLoader.getHash(doc_path)
-        # elements = partition(filename=doc_path,
-        #                      strategy="hi_res",
-        #                      extract_image_block_output_dir="utils/imageoutputs/",
-        #                      extract_images_in_pdf=True)
+        texts_to_embed = []
+        metadatas_to_embed = []
+
+        try:
+            pages = self.docLoader.PdfLoader(doc_path)
+            for page_no in range(len(pages)):
+                texts_to_embed.append(pages[page_no].page_content)
+                metadata = pages[page_no].metadata
+                metadata["pdf_hash"] = hash_value
+                metadatas_to_embed.append(metadata)
+
+            chunks = self.embedTextBtach(texts_to_embed, metadatas_to_embed)
+            self.savetoVectorDB(chunks)
+            self.docLoader.storeHash(hash_value,doc_path)
+            return True   
+        except Exception as e:
+            print(f"Error processing {doc_path}: {e}")
+            return False
+
+        
+
+
+    def chunkingDocsusinUnstructured(self,doc_path:str):
+        hash_value = self.docLoader.getHash(doc_path)
         elements = partition(filename=doc_path, strategy="fast")
         chunks = []
         current_title = ""
@@ -117,9 +134,7 @@ class DocumentProcessor:
                 if element.category in ["Title", "Header"]:
                     current_title = element.text
                 elif element_type in ["NarrativeText", "ListItem"]:
-                    # print(element.text)
-                    # chunk = self.embedText(f"Title:{current_title}\n\n {element.text}", page_no, doc_path, hash_value)
-                    # chunks.extend(chunk)
+                
                     texts_to_embed.append(f"Title:{current_title}\n\n {element.text}")
                     metadata = {
                                 "page_no":page_no,
@@ -160,55 +175,29 @@ class DocumentProcessor:
     def savetoVectorDB(self, chunks):
         # We cap the batch size at 80 to comfortably stay under the 100/min limit.
         batch_size = 80 
+        print("in vector db save")
         
         for i in range(0, len(chunks), batch_size):
             batch = chunks[i:i + batch_size]
             print(f"Embedding batch {i//batch_size + 1} ({len(batch)} chunks)...")
             
             # This handles transient network failures
-            self._add_batch_with_retry(batch)
+            try:
+                self._add_batch_with_retry(batch)
+                print(f"Embedding batch {i//batch_size + 1} ({len(batch)} chunks)...")
+            except Exception as e:
+                print(f"ERROR in batch {i//batch_size + 1}: {e}")
+                raise
             
             # If there are more chunks left, we MUST wait 60 seconds to reset the free tier quota
             if i + batch_size < len(chunks):
                 print("Batch successful. Sleeping for 60 seconds to respect API rate limits...")
                 time.sleep(60)
 
-    # def PdfEmbeddings(self, pdfpath):
-    #     print(f"pdf_path inside Embeddings {pdfpath}")
-    #     hash_value = self.docLoader.getHash(pdfpath)
-
-    #     if not self.docLoader.isProcessed(pdfpath):
-
-    #         docs = self.docLoader.PdfLoader(pdfpath)
-    #         for doc in docs:
-    #             doc.metadata["pdf_hash"] = hash_value
-    #             # print("DOC",doc)
-
-    #         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    #         chunks = text_splitter.split_documents(docs)  
-
-    #         # print("LENCHUNKS",len(chunks))      
-
-    #         vector_db = Chroma.from_documents(
-    #             documents=chunks,
-    #             embedding=self.embeddings_model,
-    #             persist_directory=f"./db"
-    #         )
-    #         self.docLoader.storeHash(hash_value,pdfpath)
-        
-           
-
-    #     return hash_value
-
+   
     def getRetriever(self):
         search_kwargs = {"k":5}
-        # print(selectedHashes)
-        # if selectedHashes:
-        #     search_kwargs["filter"]={
-        #         "pdf_hash":{
-        #         "$in":selectedHashes
-        #         }
-        #     }
+ 
 
         vector_db = Chroma(
                 persist_directory=f"./db",

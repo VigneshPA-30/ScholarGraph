@@ -30,7 +30,6 @@ mineru_venv/
 utils/
 utils/uploadedDocuments/
 utils/processedfiles.json
-db/
 *.sqlite3
 *.db
 mineru_output/

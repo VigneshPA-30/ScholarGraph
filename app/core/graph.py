@@ -1,5 +1,4 @@
 from typing import TypedDict
-from app.core.chat import Chat
 from langgraph.graph import (
     StateGraph,
     START,
